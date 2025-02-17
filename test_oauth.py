@@ -1,52 +1,59 @@
+import os
 import streamlit as st
-from google_auth_oauthlib.flow import InstalledAppFlow
+import google_auth_oauthlib.flow
 from googleapiclient.discovery import build
+import webbrowser
 
-# Define the OAuth scopes required.
-SCOPES = ['https://www.googleapis.com/auth/analytics.readonly']
+# Use an environment variable or default redirect URI for Streamlit
+redirect_uri = os.environ.get("REDIRECT_URI", "http://localhost:8501/")
 
-def get_credentials():
-    # Load the client secrets configuration from Streamlit secrets.
+def auth_flow():
+    st.write("Welcome to My App!")
+    # Check if an authorization code exists in the query parameters.
+    auth_code = st.query_params.get("code")
+    
+    # Load the client configuration from Streamlit Secrets.
+    # Ensure your secrets.toml contains a [GOOGLE_CLIENT_SECRETS.installed] table.
     client_config = st.secrets["GOOGLE_CLIENT_SECRETS"]
-    flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
     
-    # Generate the authorization URL.
-    auth_url, _ = flow.authorization_url(prompt='consent')
+    # Create the OAuth flow using the client config.
+    flow = google_auth_oauthlib.flow.Flow.from_client_config(
+        client_config,
+        scopes=["https://www.googleapis.com/auth/userinfo.email", "openid"],
+        redirect_uri=redirect_uri,
+    )
     
-    # Display the URL so the user can visit it.
-    st.write("Please visit the following URL to authorize the app:")
-    st.write(auth_url)
-    
-    # Get the authorization code from the user.
-    code = st.text_input("Enter the authorization code here:")
-    
-    if code:
-        # Fetch the token using the provided code.
-        flow.fetch_token(code=code)
-        return flow.credentials
+    if auth_code:
+        # If an authorization code is present, fetch the token.
+        flow.fetch_token(code=auth_code)
+        credentials = flow.credentials
+        st.write("Login Done")
+        user_info_service = build(
+            serviceName="oauth2",
+            version="v2",
+            credentials=credentials,
+        )
+        user_info = user_info_service.userinfo().get().execute()
+        assert user_info.get("email"), "Email not found in infos"
+        st.session_state["google_auth_code"] = auth_code
+        st.session_state["user_info"] = user_info
     else:
-        return None
+        # No auth code yet; prompt the user to sign in.
+        if st.button("Sign in with Google"):
+            authorization_url, state = flow.authorization_url(
+                access_type="offline",
+                include_granted_scopes="true",
+            )
+            # Open the URL in a new browser tab.
+            webbrowser.open_new_tab(authorization_url)
 
-def list_ga4_accounts(creds):
-    # Build the GA4 Admin API service object.
-    service = build('analyticsadmin', 'v1alpha', credentials=creds)
-    response = service.accounts().list().execute()
-    return response.get('accounts', [])
+def main():
+    if "google_auth_code" not in st.session_state:
+        auth_flow()
 
-st.title("GA4 Accounts Viewer")
+    if "google_auth_code" in st.session_state:
+        email = st.session_state["user_info"].get("email")
+        st.write(f"Hello {email}")
 
-if st.button("Connect to Google Analytics"):
-    with st.spinner("Authenticating with Google..."):
-        creds = get_credentials()
-    if creds:
-        with st.spinner("Fetching GA4 accounts..."):
-            accounts = list_ga4_accounts(creds)
-        if not accounts:
-            st.error("No GA4 accounts found.")
-        else:
-            st.success("Connected successfully!")
-            st.subheader("Accounts:")
-            for account in accounts:
-                st.write(f"**Name:** {account.get('displayName')}, **ID:** {account.get('name')}")
-    else:
-        st.warning("Please enter the authorization code to proceed.")
+if __name__ == "__main__":
+    main()
