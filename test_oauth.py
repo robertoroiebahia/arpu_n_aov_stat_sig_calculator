@@ -9,6 +9,7 @@ redirect_uri = os.environ.get("REDIRECT_URI", "http://localhost:8501/")
 
 def auth_flow():
     st.write("Welcome to My App!")
+    # Get the authorization code from query parameters (if present)
     auth_code = st.query_params.get("code")
     
     # Load client configuration from Streamlit Secrets (TOML format)
@@ -21,21 +22,27 @@ def auth_flow():
         redirect_uri=redirect_uri,
     )
     
+    # If the authorization code is present in the URL
     if auth_code:
         decoded_code = urllib.parse.unquote(auth_code)
         try:
             flow.fetch_token(code=decoded_code)
             credentials = flow.credentials
-            st.write("Login Done")
             user_info_service = build("oauth2", "v2", credentials=credentials)
             user_info = user_info_service.userinfo().get().execute()
-            assert user_info.get("email"), "Email not found in infos"
-            st.session_state["google_auth_code"] = decoded_code
-            st.session_state["user_info"] = user_info
-            st.experimental_rerun()  # Refresh the app to update session state.
+            if not user_info.get("email"):
+                st.error("Email not found in user info.")
+            else:
+                st.session_state["authenticated"] = True
+                st.session_state["user_info"] = user_info
+                # Clear the query parameters so the code doesn't re-trigger authentication.
+                st.experimental_set_query_params()
+                st.experimental_rerun()
         except Exception as e:
             st.error("Error fetching token: " + str(e))
+    
     else:
+        st.write("Please sign in with Google:")
         if st.button("Sign in with Google"):
             authorization_url, state = flow.authorization_url(
                 access_type="offline",
@@ -45,30 +52,33 @@ def auth_flow():
                 f"**[Click here to sign in with Google]({authorization_url})**",
                 unsafe_allow_html=True,
             )
-            st.write("After signing in, copy the 'code' parameter from the URL and paste it below:")
-            code_input = st.text_input("Enter the authorization code:")
-            if code_input:
-                decoded_code = urllib.parse.unquote(code_input)
-                try:
-                    flow.fetch_token(code=decoded_code)
-                    credentials = flow.credentials
-                    st.write("Login Done")
-                    user_info_service = build("oauth2", "v2", credentials=credentials)
-                    user_info = user_info_service.userinfo().get().execute()
-                    assert user_info.get("email"), "Email not found in infos"
-                    st.session_state["google_auth_code"] = decoded_code
+        # Provide a text input to allow manual entry of the auth code
+        code_input = st.text_input("Or paste your authorization code here:")
+        if code_input:
+            decoded_code = urllib.parse.unquote(code_input)
+            try:
+                flow.fetch_token(code=decoded_code)
+                credentials = flow.credentials
+                user_info_service = build("oauth2", "v2", credentials=credentials)
+                user_info = user_info_service.userinfo().get().execute()
+                if not user_info.get("email"):
+                    st.error("Email not found in user info.")
+                else:
+                    st.session_state["authenticated"] = True
                     st.session_state["user_info"] = user_info
-                    st.experimental_rerun()  # Force a refresh so session state is applied.
-                except Exception as e:
-                    st.error("Error fetching token: " + str(e))
+                    # Clear query params and refresh the app.
+                    st.experimental_set_query_params()
+                    st.experimental_rerun()
+            except Exception as e:
+                st.error("Error fetching token: " + str(e))
 
 def main():
-    if "google_auth_code" not in st.session_state:
+    if "authenticated" not in st.session_state:
         auth_flow()
-
-    if "google_auth_code" in st.session_state:
-        email = st.session_state["user_info"].get("email")
-        st.write(f"Hello {email}")
+    else:
+        user_info = st.session_state["user_info"]
+        email = user_info.get("email", "Unknown")
+        st.write(f"Hello, {email}")
 
 if __name__ == "__main__":
     main()
