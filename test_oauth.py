@@ -2,7 +2,6 @@ import os
 import streamlit as st
 import google_auth_oauthlib.flow
 from googleapiclient.discovery import build
-import webbrowser
 
 # Use the redirect URI from an environment variable or default to localhost:8501
 redirect_uri = os.environ.get("REDIRECT_URI", "http://localhost:8501/")
@@ -40,12 +39,31 @@ def auth_flow():
                 access_type="offline",
                 include_granted_scopes="true",
             )
-            webbrowser.open_new_tab(authorization_url)
+            st.markdown(
+                f"**[Click here to sign in with Google]({authorization_url})**",
+                unsafe_allow_html=True,
+            )
+            st.write("After signing in, copy the 'code' parameter from the URL and paste it below:")
+            # Optionally, you can add a text_input to capture the code here
+            code_input = st.text_input("Enter the authorization code:")
+            if code_input:
+                flow.fetch_token(code=code_input)
+                credentials = flow.credentials
+                st.write("Login Done")
+                user_info_service = build(
+                    serviceName="oauth2",
+                    version="v2",
+                    credentials=credentials,
+                )
+                user_info = user_info_service.userinfo().get().execute()
+                assert user_info.get("email"), "Email not found in infos"
+                st.session_state["google_auth_code"] = code_input
+                st.session_state["user_info"] = user_info
 
 def main():
     if "google_auth_code" not in st.session_state:
         auth_flow()
-    
+
     if "google_auth_code" in st.session_state:
         email = st.session_state["user_info"].get("email")
         st.write(f"Hello {email}")
