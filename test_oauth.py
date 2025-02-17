@@ -6,11 +6,9 @@ from googleapiclient.discovery import build
 SCOPES = ['https://www.googleapis.com/auth/analytics.readonly']
 
 def get_credentials():
-    # Load the client secrets configuration from Streamlit secrets (TOML format).
     client_config = st.secrets["GOOGLE_CLIENT_SECRETS"]
-    
-    # The client_config contains an "installed" key as per our TOML file.
     flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
+    # Use run_console() for headless environments:
     creds = flow.run_console()
     return creds
 
