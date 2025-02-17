@@ -3,25 +3,23 @@ import streamlit as st
 import google_auth_oauthlib.flow
 from googleapiclient.discovery import build
 import urllib.parse
-from google.analytics.data_v1beta import BetaAnalyticsDataClient
-from google.analytics.data_v1beta.types import RunReportRequest
 
 # Use the redirect URI from an environment variable or default to localhost:8501
 redirect_uri = os.environ.get("REDIRECT_URI", "http://localhost:8501/")
 
 def auth_flow():
     st.write("Welcome to My App!")
-    # Check if the URL query parameters include an authorization code.
     auth_code = st.query_params.get("code")
     
-    # Load the OAuth client configuration from Streamlit Secrets.
+    # Load client configuration from Streamlit Secrets (TOML format)
     client_config = st.secrets["GOOGLE_CLIENT_SECRETS"]
     
-    # Create the OAuth flow using the loaded client configuration.
+    # Create the OAuth flow using the client configuration.
+    # Updated scopes to include Google Analytics read access.
     flow = google_auth_oauthlib.flow.Flow.from_client_config(
         client_config,
         scopes=[
-            "https://www.googleapis.com/auth/userinfo.email", 
+            "https://www.googleapis.com/auth/userinfo.email",
             "openid",
             "https://www.googleapis.com/auth/analytics.readonly"
         ],
@@ -29,7 +27,6 @@ def auth_flow():
     )
     
     if auth_code:
-        # Decode the auth code in case it is URL-encoded.
         decoded_code = urllib.parse.unquote(auth_code)
         try:
             flow.fetch_token(code=decoded_code)
@@ -39,12 +36,11 @@ def auth_flow():
             if not user_info.get("email"):
                 st.error("Email not found in user info.")
             else:
-                st.session_state["authenticated"] = True
-                st.session_state["credentials"] = credentials
+                st.session_state["google_auth_code"] = decoded_code
                 st.session_state["user_info"] = user_info
-                # Clear query parameters so the code doesn't re-trigger.
-                st.experimental_set_query_params()
-                st.experimental_rerun()
+                st.session_state["credentials"] = credentials  # Store credentials for API calls
+                st.experimental_set_query_params()  # Clear query parameters so we don't re-process the code.
+                st.experimental_rerun()  # Refresh the app to show authenticated state.
         except Exception as e:
             st.error("Error fetching token: " + str(e))
     else:
@@ -58,7 +54,8 @@ def auth_flow():
                 f"**[Click here to sign in with Google]({authorization_url})**",
                 unsafe_allow_html=True,
             )
-        code_input = st.text_input("Or paste your authorization code here:")
+        st.write("Or paste your authorization code below:")
+        code_input = st.text_input("Enter the authorization code:")
         if code_input:
             decoded_code = urllib.parse.unquote(code_input)
             try:
@@ -69,53 +66,41 @@ def auth_flow():
                 if not user_info.get("email"):
                     st.error("Email not found in user info.")
                 else:
-                    st.session_state["authenticated"] = True
-                    st.session_state["credentials"] = credentials
+                    st.session_state["google_auth_code"] = decoded_code
                     st.session_state["user_info"] = user_info
+                    st.session_state["credentials"] = credentials
                     st.experimental_set_query_params()
                     st.experimental_rerun()
             except Exception as e:
                 st.error("Error fetching token: " + str(e))
 
-def run_ga4_report(credentials, property_id):
-    # Initialize the GA4 Data API client with the given credentials.
-    client = BetaAnalyticsDataClient(credentials=credentials)
-    # Create a report request: this example retrieves sessions by country for the last 7 days.
-    request = RunReportRequest(
-        property=f"properties/{property_id}",
-        date_ranges=[{"start_date": "7daysAgo", "end_date": "today"}],
-        dimensions=[{"name": "country"}],
-        metrics=[{"name": "sessions"}],
-    )
-    response = client.run_report(request=request)
-    return response
+def list_ga4_accounts(credentials):
+    # Build the GA4 Admin API service object.
+    service = build("analyticsadmin", "v1alpha", credentials=credentials)
+    response = service.accounts().list().execute()
+    accounts = response.get("accounts", [])
+    return accounts
 
 def main():
-    if "authenticated" not in st.session_state:
+    if "google_auth_code" not in st.session_state:
         auth_flow()
-    else:
+    
+    if "google_auth_code" in st.session_state:
         user_info = st.session_state["user_info"]
         email = user_info.get("email", "Unknown")
-        st.write(f"Hello, {email}")
+        st.write(f"Hello, {email}!")
         
-        # Ask for the GA4 Property ID.
-        property_id = st.text_input("Enter your GA4 Property ID (numeric only, e.g., 123456789):")
-        if property_id:
-            st.write("Fetching GA4 report...")
-            try:
-                response = run_ga4_report(st.session_state["credentials"], property_id)
-                st.subheader("Report Results (Sessions by Country):")
-                # Display header row.
-                headers = [header.name for header in response.dimension_headers] + \
-                          [header.name for header in response.metric_headers]
-                st.write(headers)
-                # Display each row.
-                for row in response.rows:
-                    dims = [d.value for d in row.dimension_values]
-                    mets = [m.value for m in row.metric_values]
-                    st.write(dims + mets)
-            except Exception as e:
-                st.error("Error fetching GA4 report: " + str(e))
+        if "credentials" in st.session_state:
+            credentials = st.session_state["credentials"]
+            accounts = list_ga4_accounts(credentials)
+            if accounts:
+                st.subheader("GA4 Accounts:")
+                for account in accounts:
+                    st.write(f"**Name:** {account.get('displayName')}, **ID:** {account.get('name')}")
+            else:
+                st.write("No GA4 accounts found.")
+        else:
+            st.error("Credentials not available.")
 
 if __name__ == "__main__":
     main()
