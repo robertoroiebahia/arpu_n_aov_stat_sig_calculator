@@ -1,5 +1,6 @@
 import math
 import statistics
+import scipy
 from scipy import stats
 
 def calculate_welch_t_test(mean_A, sd_A, n_A, mean_B, sd_B, n_B):
