@@ -11,7 +11,7 @@ def get_credentials():
     
     # The client_config contains an "installed" key as per our TOML file.
     flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
-    creds = flow.run_local_server(port=0)
+    creds = flow.run_console()
     return creds
 
 def list_ga4_accounts(creds):
