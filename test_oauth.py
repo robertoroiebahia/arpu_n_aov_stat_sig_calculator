@@ -9,7 +9,6 @@ redirect_uri = os.environ.get("REDIRECT_URI", "http://localhost:8501/")
 
 def auth_flow():
     st.write("Welcome to My App!")
-    # Get the authorization code from query parameters (if present)
     auth_code = st.query_params.get("code")
     
     # Load client configuration from Streamlit Secrets (TOML format)
@@ -23,7 +22,6 @@ def auth_flow():
     )
     
     if auth_code:
-        # Decode the auth code if it's URL-encoded.
         decoded_code = urllib.parse.unquote(auth_code)
         try:
             flow.fetch_token(code=decoded_code)
@@ -34,6 +32,7 @@ def auth_flow():
             assert user_info.get("email"), "Email not found in infos"
             st.session_state["google_auth_code"] = decoded_code
             st.session_state["user_info"] = user_info
+            st.experimental_rerun()  # Refresh the app to update session state.
         except Exception as e:
             st.error("Error fetching token: " + str(e))
     else:
@@ -59,13 +58,14 @@ def auth_flow():
                     assert user_info.get("email"), "Email not found in infos"
                     st.session_state["google_auth_code"] = decoded_code
                     st.session_state["user_info"] = user_info
+                    st.experimental_rerun()  # Force a refresh so session state is applied.
                 except Exception as e:
                     st.error("Error fetching token: " + str(e))
 
 def main():
     if "google_auth_code" not in st.session_state:
         auth_flow()
-    
+
     if "google_auth_code" in st.session_state:
         email = st.session_state["user_info"].get("email")
         st.write(f"Hello {email}")
