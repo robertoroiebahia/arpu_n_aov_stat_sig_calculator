@@ -2,3 +2,6 @@ streamlit>=1.18
 scipy>=1.7.0
 google-auth-oauthlib>=0.4.6
 google-api-python-client>=2.70.0
+streamlit
+scipy
+plotly
