@@ -270,6 +270,45 @@ def create_comparison_chart(control_val, variant_val, metric_name, is_currency=F
     )
     
     return fig
+def calculate_sample_size_per_variant(baseline_rate, mde, alpha=0.05, power=0.80):
+    """
+    Calculate required sample size per variant for conversion rate tests
+    baseline_rate: baseline conversion rate (as decimal, e.g., 0.028 for 2.8%)
+    mde: minimum detectable effect (as decimal, e.g., 0.10 for 10% relative lift)
+    alpha: significance level (default 0.05 for 95% confidence)
+    power: statistical power (default 0.80)
+    """
+    # Calculate the alternative conversion rate
+    p1 = baseline_rate
+    p2 = baseline_rate * (1 + mde)
+    
+    # Z-scores for alpha and power
+    z_alpha = stats.norm.ppf(1 - alpha / 2)
+    z_beta = stats.norm.ppf(power)
+    
+    # Pooled probability
+    p_avg = (p1 + p2) / 2
+    
+    # Sample size formula for two proportions
+    n = ((z_alpha * math.sqrt(2 * p_avg * (1 - p_avg)) + 
+          z_beta * math.sqrt(p1 * (1 - p1) + p2 * (1 - p2))) ** 2) / ((p2 - p1) ** 2)
+    
+    return math.ceil(n)
+
+def calculate_days_needed(required_visitors, current_visitors, days_elapsed):
+    """Calculate additional days needed based on current traffic rate"""
+    if days_elapsed <= 0:
+        return None
+    
+    visitors_per_day = current_visitors / days_elapsed
+    
+    if visitors_per_day <= 0:
+        return None
+    
+    days_needed = math.ceil(required_visitors / visitors_per_day)
+    additional_days = max(0, days_needed - days_elapsed)
+    
+    return days_needed, additional_days
 
 # Header
 st.markdown("<h1>🎯 CRO Test Calculator</h1>", unsafe_allow_html=True)
@@ -278,6 +317,31 @@ st.markdown("<p class='subtitle'>Calculate statistical significance for conversi
 st.markdown("---")
 
 # Input Section
+st.markdown("## ⚙️ Test Configuration")
+
+config_col1, config_col2 = st.columns(2)
+
+with config_col1:
+    days_live = st.number_input(
+        "Days Live", 
+        min_value=0, 
+        value=7, 
+        step=1, 
+        help="How many days has this test been running?"
+    )
+
+with config_col2:
+    mde_percent = st.number_input(
+        "Minimum Detectable Effect (MDE %)", 
+        min_value=1.0, 
+        max_value=100.0, 
+        value=10.0, 
+        step=1.0,
+        help="The smallest lift you want to be able to detect. Typically 5-15% for conversion tests."
+    )
+
+st.markdown("---")
+
 col_a, col_b = st.columns(2, gap="large")
 
 with col_a:
@@ -336,6 +400,83 @@ arpu_A = sum(full_revenues_A) / n_A if n_A > 0 else 0
 arpu_B = sum(full_revenues_B) / n_B if n_B > 0 else 0
 sd_arpu_A = statistics.stdev(full_revenues_A) if n_A > 1 else 0
 sd_arpu_B = statistics.stdev(full_revenues_B) if n_B > 1 else 0
+
+st.markdown("---")
+
+st.markdown("---")
+
+# Test Duration & Sample Size Analysis
+st.markdown("## ⏱️ Test Duration & Sample Size")
+
+# Calculate required sample size
+baseline_conv_rate = conv_rate_A / 100  # Convert to decimal
+mde_decimal = mde_percent / 100
+required_sample_per_variant = calculate_sample_size_per_variant(baseline_conv_rate, mde_decimal)
+
+# Current totals
+total_current_visitors = n_A + n_B
+
+# Duration analysis
+duration_col1, duration_col2, duration_col3, duration_col4 = st.columns(4)
+
+with duration_col1:
+    st.metric("Days Live", f"{days_live} days")
+
+with duration_col2:
+    st.metric("Current Sample Size", f"{total_current_visitors:,}")
+
+with duration_col3:
+    required_total = required_sample_per_variant * 2
+    st.metric("Required Sample Size", f"{required_total:,}")
+    st.caption(f"Based on {mde_percent}% MDE")
+
+with duration_col4:
+    sample_progress = (total_current_visitors / required_total * 100) if required_total > 0 else 0
+    st.metric("Sample Progress", f"{sample_progress:.1f}%")
+
+# Calculate days recommendation
+if days_live > 0:
+    days_result = calculate_days_needed(required_total, total_current_visitors, days_live)
+    
+    if days_result:
+        total_days_needed, additional_days = days_result
+        
+        st.markdown("")  # spacing
+        
+        # Recommendations
+        if total_current_visitors >= required_total and days_live >= 14:
+            st.success(f"✅ **Test is ready to conclude** — You've reached the required sample size ({required_total:,} visitors) and run for {days_live} days. You can confidently analyze results.")
+        elif total_current_visitors >= required_total and days_live < 14:
+            days_remaining = 14 - days_live
+            st.warning(f"⚠️ **Sample size reached, but run longer** — You have enough visitors, but tests should run at least 14 days to capture weekly patterns. Recommend running {days_remaining} more days.")
+        elif total_current_visitors < required_total and days_live >= 14:
+            st.warning(f"⚠️ **Need more sample size** — You've run for {days_live} days, but need approximately **{additional_days} more days** to reach {required_total:,} total visitors (based on current traffic of {total_current_visitors/days_live:.0f} visitors/day).")
+        else:
+            # Need both more time and more sample
+            days_for_sample = max(total_days_needed, 14)
+            days_remaining = days_for_sample - days_live
+            st.info(f"📊 **Continue testing** — Recommend running for approximately **{days_remaining} more days** to reach both minimum duration (14 days) and required sample size ({required_total:,} visitors).")
+        
+        # Show detailed breakdown
+        with st.expander("📈 See detailed breakdown"):
+            st.markdown(f"""
+            **Current Status:**
+            - Days running: {days_live}
+            - Total visitors so far: {total_current_visitors:,}
+            - Average visitors per day: {total_current_visitors/days_live:.0f}
+            
+            **Requirements:**
+            - Minimum detectable effect (MDE): {mde_percent}% relative lift
+            - Required visitors per variant: {required_sample_per_variant:,}
+            - Required total visitors: {required_total:,}
+            - Minimum recommended duration: 14 days
+            
+            **Projection:**
+            - Estimated total days needed: {max(total_days_needed, 14)} days
+            - Additional days recommended: {max(additional_days, 14 - days_live)} days
+            """)
+else:
+    st.info("💡 Enter the number of days this test has been running to get duration recommendations.")
 
 st.markdown("---")
 
