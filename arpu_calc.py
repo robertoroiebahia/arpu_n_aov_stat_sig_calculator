@@ -663,24 +663,6 @@ st.info("""
 - Typical MDE targets: 5-10% for high-traffic sites, 10-20% for lower-traffic sites
 """)
 
-# Bottom Info
-st.info("""
-**📖 How to Read Results:**
-- **P-value < 0.05**: Statistically significant at 95% confidence (winner!)
-- **P-value 0.05-0.10**: Marginally significant (interesting trend, keep testing)
-- **P-value > 0.10**: Not significant (likely random chance)
-- **Relative Lift**: Percentage improvement over control
-- **MDE (Minimum Detectable Effect)**: The smallest lift you want to reliably detect
-
-**💡 Pro Tips:**
-- Run tests for at least 2 weeks to account for weekly patterns
-- Aim for minimum 100 conversions per variation for reliable results
-- Don't stop tests early just because you see significance
-- Consider business significance, not just statistical significance
-- Lower MDE requires more sample size (5% MDE needs 4x more traffic than 10% MDE)
-- Typical MDE targets: 5-10% for high-traffic sites, 10-20% for lower-traffic sites
-""")
-
 st.markdown("---")
 
 # Statistical Methodology Section
