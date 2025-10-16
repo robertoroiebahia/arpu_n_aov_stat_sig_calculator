@@ -403,7 +403,9 @@ st.markdown("### 1️⃣ Conversion Rate Test")
 z_stat_conv, p_value_conv = calculate_z_test_conversion(conv_rate_A, n_A, conv_rate_B, n_B)
 
 if z_stat_conv is not None:
-    test_col1, test_col2, test_col3, test_col4 = st.columns(4)
+    confidence_level_conv = (1 - p_value_conv) * 100
+    
+    test_col1, test_col2, test_col3, test_col4, test_col5 = st.columns(5)
     
     with test_col1:
         st.metric("Relative Lift", f"{conv_lift:+.2f}%")
@@ -412,19 +414,21 @@ if z_stat_conv is not None:
     with test_col3:
         st.metric("P-Value", f"{p_value_conv:.4f}")
     with test_col4:
+        st.metric("Confidence", f"{confidence_level_conv:.2f}%")
+    with test_col5:
         if p_value_conv < 0.05:
-            st.metric("Result", "✅ Significant", delta="95% confidence")
+            st.metric("Result", "✅ Significant", delta="95%+ confidence")
         else:
             st.metric("Result", "❌ Inconclusive", delta="Need more data")
     
     st.markdown("")  # spacing
     
     if p_value_conv < 0.05:
-        st.success(f"✅ **Statistically Significant** — There's a {(1-p_value_conv)*100:.1f}% probability this isn't random chance.")
+        st.success(f"✅ **Statistically Significant** — {confidence_level_conv:.2f}% confidence this isn't random chance.")
     elif p_value_conv < 0.10:
-        st.warning(f"⚠️ **Marginally Significant** — P-value of {p_value_conv:.4f} suggests a trend, but more data recommended.")
+        st.warning(f"⚠️ **Marginally Significant** — {confidence_level_conv:.2f}% confidence. P-value of {p_value_conv:.4f} suggests a trend, but more data recommended.")
     else:
-        st.error(f"❌ **Not Significant** — P-value of {p_value_conv:.4f} means we can't rule out random chance. Continue testing.")
+        st.error(f"❌ **Not Significant** — Only {confidence_level_conv:.2f}% confidence. P-value of {p_value_conv:.4f} means we can't rule out random chance. Continue testing.")
 
 st.markdown("")  # spacing
 
@@ -433,7 +437,9 @@ st.markdown("### 2️⃣ Revenue Per Visitor Test")
 t_stat_arpu, df_arpu, p_value_arpu = calculate_welch_t_test(arpu_A, sd_arpu_A, n_A, arpu_B, sd_arpu_B, n_B)
 
 if t_stat_arpu is not None:
-    test_col1, test_col2, test_col3, test_col4 = st.columns(4)
+    confidence_level_arpu = (1 - p_value_arpu) * 100
+    
+    test_col1, test_col2, test_col3, test_col4, test_col5 = st.columns(5)
     
     with test_col1:
         st.metric("Relative Lift", f"{arpu_lift:+.2f}%")
@@ -442,19 +448,21 @@ if t_stat_arpu is not None:
     with test_col3:
         st.metric("P-Value", f"{p_value_arpu:.4f}")
     with test_col4:
+        st.metric("Confidence", f"{confidence_level_arpu:.2f}%")
+    with test_col5:
         if p_value_arpu < 0.05:
-            st.metric("Result", "✅ Significant", delta="95% confidence")
+            st.metric("Result", "✅ Significant", delta="95%+ confidence")
         else:
             st.metric("Result", "❌ Inconclusive", delta="Need more data")
     
     st.markdown("")  # spacing
     
     if p_value_arpu < 0.05:
-        st.success(f"✅ **Statistically Significant** — There's a {(1-p_value_arpu)*100:.1f}% probability this isn't random chance.")
+        st.success(f"✅ **Statistically Significant** — {confidence_level_arpu:.2f}% confidence this isn't random chance.")
     elif p_value_arpu < 0.10:
-        st.warning(f"⚠️ **Marginally Significant** — P-value of {p_value_arpu:.4f} suggests a trend, but more data recommended.")
+        st.warning(f"⚠️ **Marginally Significant** — {confidence_level_arpu:.2f}% confidence. P-value of {p_value_arpu:.4f} suggests a trend, but more data recommended.")
     else:
-        st.error(f"❌ **Not Significant** — P-value of {p_value_arpu:.4f} means we can't rule out random chance. Continue testing.")
+        st.error(f"❌ **Not Significant** — Only {confidence_level_arpu:.2f}% confidence. P-value of {p_value_arpu:.4f} means we can't rule out random chance. Continue testing.")
 
 st.markdown("")  # spacing
 
@@ -465,7 +473,9 @@ if n_purchasers_A > 1 and n_purchasers_B > 1:
     t_stat_aov, df_aov, p_value_aov = calculate_welch_t_test(aov_A, sd_aov_A, n_purchasers_A, aov_B, sd_aov_B, n_purchasers_B)
     
     if t_stat_aov is not None:
-        test_col1, test_col2, test_col3, test_col4 = st.columns(4)
+        confidence_level_aov = (1 - p_value_aov) * 100
+        
+        test_col1, test_col2, test_col3, test_col4, test_col5 = st.columns(5)
         
         with test_col1:
             st.metric("Relative Lift", f"{aov_lift:+.2f}%")
@@ -474,19 +484,21 @@ if n_purchasers_A > 1 and n_purchasers_B > 1:
         with test_col3:
             st.metric("P-Value", f"{p_value_aov:.4f}")
         with test_col4:
+            st.metric("Confidence", f"{confidence_level_aov:.2f}%")
+        with test_col5:
             if p_value_aov < 0.05:
-                st.metric("Result", "✅ Significant", delta="95% confidence")
+                st.metric("Result", "✅ Significant", delta="95%+ confidence")
             else:
                 st.metric("Result", "❌ Inconclusive", delta="Need more data")
         
         st.markdown("")  # spacing
         
         if p_value_aov < 0.05:
-            st.success(f"✅ **Statistically Significant** — There's a {(1-p_value_aov)*100:.1f}% probability this isn't random chance.")
+            st.success(f"✅ **Statistically Significant** — {confidence_level_aov:.2f}% confidence this isn't random chance.")
         elif p_value_aov < 0.10:
-            st.warning(f"⚠️ **Marginally Significant** — P-value of {p_value_aov:.4f} suggests a trend, but more data recommended.")
+            st.warning(f"⚠️ **Marginally Significant** — {confidence_level_aov:.2f}% confidence. P-value of {p_value_aov:.4f} suggests a trend, but more data recommended.")
         else:
-            st.error(f"❌ **Not Significant** — P-value of {p_value_aov:.4f} means we can't rule out random chance. Continue testing.")
+            st.error(f"❌ **Not Significant** — Only {confidence_level_aov:.2f}% confidence. P-value of {p_value_aov:.4f} means we can't rule out random chance. Continue testing.")
 else:
     st.warning("⚠️ Need at least 2 conversions in each group to test AOV significance.")
 
