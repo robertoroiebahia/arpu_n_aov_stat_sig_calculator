@@ -662,3 +662,240 @@ st.info("""
 - Lower MDE requires more sample size (5% MDE needs 4x more traffic than 10% MDE)
 - Typical MDE targets: 5-10% for high-traffic sites, 10-20% for lower-traffic sites
 """)
+
+# Bottom Info
+st.info("""
+**📖 How to Read Results:**
+- **P-value < 0.05**: Statistically significant at 95% confidence (winner!)
+- **P-value 0.05-0.10**: Marginally significant (interesting trend, keep testing)
+- **P-value > 0.10**: Not significant (likely random chance)
+- **Relative Lift**: Percentage improvement over control
+- **MDE (Minimum Detectable Effect)**: The smallest lift you want to reliably detect
+
+**💡 Pro Tips:**
+- Run tests for at least 2 weeks to account for weekly patterns
+- Aim for minimum 100 conversions per variation for reliable results
+- Don't stop tests early just because you see significance
+- Consider business significance, not just statistical significance
+- Lower MDE requires more sample size (5% MDE needs 4x more traffic than 10% MDE)
+- Typical MDE targets: 5-10% for high-traffic sites, 10-20% for lower-traffic sites
+""")
+
+st.markdown("---")
+
+# Statistical Methodology Section
+st.markdown("## 📚 Statistical Methodology & Validity")
+
+st.markdown("""
+This calculator uses industry-standard statistical tests to determine whether your A/B test results are statistically significant. 
+Here's how it works and why these methods are valid:
+""")
+
+# Create tabs for different explanations
+method_tab1, method_tab2, method_tab3, method_tab4 = st.tabs([
+    "Conversion Rate Test", 
+    "Revenue Tests (AOV & RPV)", 
+    "Sample Size Calculation",
+    "Why This Matters"
+])
+
+with method_tab1:
+    st.markdown("""
+    ### Z-Test for Conversion Rates
+    
+    **What it does:**  
+    Compares two conversion rates to determine if the difference between them is statistically significant or just random variation.
+    
+    **The Math:**
+    1. **Calculate pooled conversion rate:**  
+       `p_pooled = (conversions_A + conversions_B) / (visitors_A + visitors_B)`
+    
+    2. **Calculate standard error:**  
+       `SE = √[p_pooled × (1 - p_pooled) × (1/n_A + 1/n_B)]`
+    
+    3. **Calculate Z-statistic:**  
+       `Z = (conversion_rate_B - conversion_rate_A) / SE`
+    
+    4. **Calculate p-value:**  
+       Using the Z-statistic, we look up the probability in the standard normal distribution
+    
+    **Why it's valid:**
+    - The **Z-test** (also called a two-proportion z-test) is the gold standard for comparing conversion rates
+    - Based on the **Central Limit Theorem**, which says that with large enough sample sizes, the sampling distribution of proportions is approximately normal
+    - This is the same method used by tools like Optimizely, VWO, Google Optimize, and Convert
+    - Assumes independent observations (each visitor is independent) and sufficiently large sample sizes (typically n × p > 5 and n × (1-p) > 5)
+    
+    **Real-world example:**
+    - Control: 280 conversions out of 10,000 visitors = 2.8% conversion rate
+    - Variant: 312 conversions out of 10,000 visitors = 3.12% conversion rate
+    - This calculator determines if that 0.32 percentage point difference is real or just random noise
+    """)
+
+with method_tab2:
+    st.markdown("""
+    ### Welch's T-Test for Revenue Metrics
+    
+    **What it does:**  
+    Compares the means of two groups (like Average Order Value or Revenue Per Visitor) when the groups may have different variances and different sample sizes.
+    
+    **The Math:**
+    1. **Calculate standard error of the difference:**  
+       `SE_diff = √[(SD_A² / n_A) + (SD_B² / n_B)]`
+    
+    2. **Calculate t-statistic:**  
+       `t = (mean_B - mean_A) / SE_diff`
+    
+    3. **Calculate degrees of freedom (Welch-Satterthwaite equation):**  
+       `df = [(SD_A²/n_A + SD_B²/n_B)²] / [(SD_A²/n_A)²/(n_A-1) + (SD_B²/n_B)²/(n_B-1)]`
+    
+    4. **Calculate p-value:**  
+       Using the t-statistic and degrees of freedom, we look up the probability in the t-distribution
+    
+    **Why Welch's T-Test (not Student's T-Test):**
+    - **Student's t-test** assumes equal variances between groups — rarely true in real-world e-commerce data
+    - **Welch's t-test** doesn't assume equal variances, making it more robust and accurate for A/B tests
+    - Revenue data is often highly variable (some customers spend $50, others spend $500+)
+    - Welch's test is considered the default choice by statisticians when comparing means
+    
+    **Why it's valid:**
+    - Welch's t-test is widely accepted in academic research and industry practice
+    - More conservative than Student's t-test (less likely to give false positives)
+    - Used by data science teams at companies like Netflix, Airbnb, and Booking.com
+    - Works well even when sample sizes are unequal between variants
+    
+    **Two separate tests:**
+    - **Average Order Value (AOV):** Only looks at customers who purchased (compares spending among converters)
+    - **Revenue Per Visitor (RPV/ARPU):** Looks at all visitors, including those who didn't buy (the real business metric)
+    
+    **Real-world example:**
+    - Control AOV: $95.00 (among 280 purchasers)
+    - Variant AOV: $102.50 (among 312 purchasers)
+    - This test tells you if that $7.50 difference is statistically significant, accounting for the variability in order values
+    """)
+
+with method_tab3:
+    st.markdown("""
+    ### Sample Size & MDE Calculation
+    
+    **What it does:**  
+    Calculates how many visitors you need to reliably detect a specific lift (your Minimum Detectable Effect).
+    
+    **The Math:**
+    Uses the standard formula for comparing two proportions:
+    
+    `n = [(Z_α × √(2p̄(1-p̄)) + Z_β × √(p₁(1-p₁) + p₂(1-p₂)))² / (p₂ - p₁)²]`
+    
+    Where:
+    - `Z_α` = Z-score for significance level (1.96 for 95% confidence)
+    - `Z_β` = Z-score for statistical power (0.84 for 80% power)
+    - `p₁` = baseline conversion rate
+    - `p₂` = expected conversion rate after lift
+    - `p̄` = pooled probability
+    
+    **Key parameters:**
+    - **Alpha (α = 0.05):** 5% chance of false positive (finding significance when there isn't any)
+    - **Power (1 - β = 0.80):** 80% chance of detecting a real effect when it exists
+    - These are industry-standard values used by professional experimenters
+    
+    **Why it matters:**
+    - Running a test with too few visitors = wasting time on inconclusive results
+    - MDE helps you plan realistic tests based on your traffic levels
+    - If you need to detect a 5% lift but only have traffic for 20% MDE, you'll need to either:
+        - Run the test much longer
+        - Focus on bigger, bolder changes
+        - Accept that you might miss smaller wins
+    
+    **The traffic vs. sensitivity tradeoff:**
+    - Detecting a **5% lift** requires ~4× more traffic than detecting a **10% lift**
+    - Detecting a **10% lift** requires ~4× more traffic than detecting a **20% lift**
+    - This is why high-traffic sites can detect smaller optimizations
+    
+    **Real-world example:**
+    - Baseline: 2.8% conversion rate
+    - MDE: 10% relative lift (2.8% → 3.08%)
+    - Required: ~31,000 visitors per variant = 62,000 total
+    - At 2,000 visitors/day, you'd need to run the test for 31 days
+    """)
+
+with method_tab4:
+    st.markdown("""
+    ### Why Statistical Significance Matters
+    
+    **The core problem:**  
+    Random chance creates variation in test results. Without statistical testing, you can't tell the difference between:
+    - A real improvement that will persist when you ship the variant
+    - Random noise that will disappear with more data
+    
+    **Real example of the problem:**
+    Imagine you flip a coin 10 times and get 6 heads. Is the coin biased? Probably not — that could easily happen by chance.  
+    But if you flip it 10,000 times and get 6,000 heads? Now we can be confident something's up.
+    
+    **What p-value actually means:**
+    - **p-value = 0.03** means: "If there were truly no difference between control and variant, there's only a 3% chance we'd see results this extreme"
+    - **Not** "there's a 97% chance the variant is better" (common misconception)
+    - **Not** "the variant will definitely give these results in production"
+    
+    **Why we use p < 0.05 as the threshold:**
+    - It's a convention, not a law of nature
+    - Means we accept a 5% false positive rate (1 in 20 "winners" might be flukes)
+    - For critical business decisions, you might want p < 0.01 (99% confidence)
+    - For quick learning, some teams accept p < 0.10 (90% confidence)
+    
+    **Common pitfalls this calculator helps you avoid:**
+    
+    1. **Peeking problem:**  
+       Checking results daily and stopping when you see significance inflates false positive rate. Solution: pre-calculate required sample size and commit to running until you hit it.
+    
+    2. **Sample size too small:**  
+       With 50 conversions per variant, even a 20% lift might not reach significance. Solution: use the MDE calculator to plan appropriately.
+    
+    3. **Stopping too early:**  
+       Tests need to run for complete business cycles (usually 1-2 weeks minimum) to account for day-of-week effects, paycheck timing, etc.
+    
+    4. **Multiple metrics problem:**  
+       Testing 20 metrics simultaneously increases false positive risk (even random data will show 1 in 20 as "significant"). This is why we focus on your primary KPIs.
+    
+    **Why these specific tests?**
+    - **Z-test for conversion rates** → This is the industry standard, used by every major testing platform
+    - **Welch's t-test for revenue** → More robust than Student's t-test when variances differ (which they always do with revenue data)
+    - These aren't proprietary methods — they're fundamental statistical techniques taught in graduate-level statistics courses and used across industries
+    
+    **Peer review & validation:**
+    - These methods are documented in:
+        - "Trustworthy Online Controlled Experiments" by Kohavi, Tang & Xu (Microsoft Research)
+        - "Statistical Methods in Online A/B Testing" by Georgi Georgiev
+        - Academic papers from tech companies (Google, Netflix, Microsoft, Booking.com)
+    - If you want to verify the math, you can compare results against:
+        - [Evan Miller's A/B Test Calculator](https://www.evanmiller.org/ab-testing/)
+        - [AB Testguide Calculator](https://abtestguide.com/calc/)
+        - The `scipy.stats` library functions we use are peer-reviewed open source implementations
+    
+    **When this calculator might not be appropriate:**
+    - Very small sample sizes (< 30 conversions per variant) → consider sequential testing methods instead
+    - Non-independent observations (e.g., same user counted multiple times) → need more advanced clustering techniques
+    - Multiple variants or complex experiments → requires multiple comparison corrections (Bonferroni, Šidák, etc.)
+    - Very skewed revenue distributions → might need bootstrapping or non-parametric tests
+    
+    For the vast majority of e-commerce A/B tests with clean data and standard setups, this calculator provides reliable, industry-standard statistical analysis.
+    """)
+
+st.markdown("---")
+
+# References section
+st.markdown("### 📖 References & Further Reading")
+
+st.markdown("""
+**Books:**
+- Kohavi, R., Tang, D., & Xu, Y. (2020). *Trustworthy Online Controlled Experiments: A Practical Guide to A/B Testing*. Cambridge University Press.
+- Georgiev, G. (2019). *Statistical Methods in Online A/B Testing*. 
+
+**Online Resources:**
+- [Evan Miller's A/B Testing Formulas](https://www.evanmiller.org/ab-testing/)
+- [Netflix Tech Blog on A/B Testing](https://netflixtechblog.com/tagged/ab-testing)
+- [Optimizely Stats Engine Documentation](https://www.optimizely.com/optimization-glossary/statistical-significance/)
+- [SciPy Stats Documentation](https://docs.scipy.org/doc/scipy/reference/stats.html)
+
+**Academic Papers:**
+- Welch, B.L. (1947). "The generalization of 'Student's' problem when several different population variances are involved." *Biometrika* 34(1-2): 28-35.
+- Kohavi, R., et al. (2009). "Controlled experiments on the web: survey and practical guide." *Data Mining and Knowledge Discovery* 18(1): 140-181.
+""")
