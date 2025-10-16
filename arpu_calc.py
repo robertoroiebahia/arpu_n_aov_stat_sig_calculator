@@ -226,7 +226,7 @@ def create_comparison_chart(control_val, variant_val, metric_name, is_currency=F
         marker_color='#94a3b8',
         text=[control_text],
         textposition='outside',
-        textfont=dict(size=16, family='Inter', color='#1e293b'),
+        textfont=dict(size=14, family='Inter', color='#1e293b'),
         width=0.5
     ))
     
@@ -237,9 +237,12 @@ def create_comparison_chart(control_val, variant_val, metric_name, is_currency=F
         marker_color='#667eea',
         text=[variant_text],
         textposition='outside',
-        textfont=dict(size=16, family='Inter', color='#1e293b'),
+        textfont=dict(size=14, family='Inter', color='#1e293b'),
         width=0.5
     ))
+    
+    # Calculate max value for proper y-axis range
+    max_val = max(control_val, variant_val)
     
     fig.update_layout(
         title=dict(
@@ -251,13 +254,14 @@ def create_comparison_chart(control_val, variant_val, metric_name, is_currency=F
         showlegend=False,
         paper_bgcolor='white',
         plot_bgcolor='white',
-        height=280,
-        margin=dict(l=20, r=20, t=60, b=40),
+        height=300,
+        margin=dict(l=20, r=20, t=80, b=40),  # Increased top margin
         yaxis=dict(
             showgrid=True, 
             gridcolor='#f1f5f9', 
             zeroline=False,
-            title=None
+            title=None,
+            range=[0, max_val * 1.25]  # Add 25% padding above bars for labels
         ),
         xaxis=dict(
             showgrid=False,
