@@ -1,4 +1,4 @@
-CRO Test Calculator
+## CRO Test Calculator
 
 A statistical significance calculator built for conversion rate optimization (CRO) professionals running A/B tests on e-commerce sites. Calculate significance for conversion rates, average order value (AOV), and revenue per visitor (RPV) with proper statistical methods.
 
