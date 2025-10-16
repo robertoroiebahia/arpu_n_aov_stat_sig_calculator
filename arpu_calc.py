@@ -206,18 +206,25 @@ def calculate_z_test_conversion(conv_A, n_A, conv_B, n_B):
     
     return z_stat, p_value
 
-def create_comparison_chart(control_val, variant_val, metric_name):
+def create_comparison_chart(control_val, variant_val, metric_name, is_currency=False):
     """Create a beautiful comparison bar chart"""
-    is_currency = '$' in metric_name
     
     fig = go.Figure()
+    
+    # Format text based on metric type
+    if is_currency:
+        control_text = f'${control_val:.2f}'
+        variant_text = f'${variant_val:.2f}'
+    else:
+        control_text = f'{control_val:.2f}%'
+        variant_text = f'{variant_val:.2f}%'
     
     fig.add_trace(go.Bar(
         name='Control',
         x=['Control'],
         y=[control_val],
         marker_color='#94a3b8',
-        text=[f'${control_val:.2f}' if is_currency else f'{control_val:.2f}%'],
+        text=[control_text],
         textposition='outside',
         textfont=dict(size=16, family='Inter', color='#1e293b'),
         width=0.5
@@ -228,7 +235,7 @@ def create_comparison_chart(control_val, variant_val, metric_name):
         x=['Variant'],
         y=[variant_val],
         marker_color='#667eea',
-        text=[f'${variant_val:.2f}' if is_currency else f'{variant_val:.2f}%'],
+        text=[variant_text],
         textposition='outside',
         textfont=dict(size=16, family='Inter', color='#1e293b'),
         width=0.5
@@ -371,15 +378,15 @@ st.markdown("## 📈 Visual Comparison")
 chart_col1, chart_col2, chart_col3 = st.columns(3)
 
 with chart_col1:
-    fig_conv = create_comparison_chart(conv_rate_A, conv_rate_B, "Conversion Rate")
+    fig_conv = create_comparison_chart(conv_rate_A, conv_rate_B, "Conversion Rate", is_currency=False)
     st.plotly_chart(fig_conv, use_container_width=True)
 
 with chart_col2:
-    fig_aov = create_comparison_chart(aov_A, aov_B, "Average Order Value")
+    fig_aov = create_comparison_chart(aov_A, aov_B, "Average Order Value", is_currency=True)
     st.plotly_chart(fig_aov, use_container_width=True)
 
 with chart_col3:
-    fig_rpv = create_comparison_chart(arpu_A, arpu_B, "Revenue Per Visitor")
+    fig_rpv = create_comparison_chart(arpu_A, arpu_B, "Revenue Per Visitor", is_currency=True)
     st.plotly_chart(fig_rpv, use_container_width=True)
 
 st.markdown("---")
