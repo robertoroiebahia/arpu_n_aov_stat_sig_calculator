@@ -2,7 +2,8 @@ import math
 import statistics
 import streamlit as st
 from scipy import stats
-import pandas as pd
+import plotly.graph_objects as go
+import plotly.express as px
 
 # Page Config
 st.set_page_config(
@@ -15,24 +16,27 @@ st.set_page_config(
 # Custom CSS
 st.markdown("""
 <style>
+    /* Import Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     
-    * {
+    /* Global Styles */
+    html, body, [class*="css"] {
         font-family: 'Inter', sans-serif;
     }
     
+    /* Main container background */
     .main {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 0;
     }
     
     .block-container {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-        max-width: 1400px;
+        padding-top: 3rem !important;
+        padding-bottom: 3rem !important;
+        max-width: 1400px !important;
     }
     
-    h1 {
+    /* Header styling */
+    .main h1 {
         color: white !important;
         font-weight: 800 !important;
         font-size: 3rem !important;
@@ -41,28 +45,40 @@ st.markdown("""
         text-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
-    h2 {
+    .main h2 {
         color: white !important;
         font-weight: 700 !important;
-        font-size: 1.5rem !important;
+        font-size: 1.8rem !important;
         margin-top: 2rem !important;
+        margin-bottom: 1.5rem !important;
     }
     
-    h3 {
+    .main h3 {
         color: #1e293b !important;
         font-weight: 700 !important;
         font-size: 1.25rem !important;
-        margin-top: 1.5rem !important;
+        margin-top: 1rem !important;
+        margin-bottom: 1rem !important;
     }
     
-    .stMarkdown {
+    /* Subtitle styling */
+    .subtitle {
+        color: rgba(255,255,255,0.95) !important;
+        text-align: center;
+        font-size: 1.125rem;
+        font-weight: 500;
+        margin-bottom: 2.5rem;
+    }
+    
+    /* Card container for input sections */
+    div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
         background: white;
         padding: 2rem;
         border-radius: 16px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.07);
-        margin-bottom: 1rem;
     }
     
+    /* Metric cards */
     [data-testid="stMetricValue"] {
         font-size: 2rem !important;
         font-weight: 800 !important;
@@ -82,86 +98,77 @@ st.markdown("""
         font-weight: 700 !important;
     }
     
-    .stTextInput input, .stNumberInput input, .stTextArea textarea {
+    /* Input styling */
+    .stNumberInput input, .stTextArea textarea {
         border-radius: 8px !important;
         border: 2px solid #e2e8f0 !important;
         font-size: 0.95rem !important;
         padding: 0.75rem !important;
+        background: white !important;
     }
     
-    .stTextInput input:focus, .stNumberInput input:focus, .stTextArea textarea:focus {
+    .stNumberInput input:focus, .stTextArea textarea:focus {
         border-color: #667eea !important;
         box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
     }
     
-    .stButton button {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 0.75rem 2rem;
-        font-weight: 600;
-        font-size: 1rem;
-        transition: all 0.3s;
+    /* Labels */
+    .stNumberInput label, .stTextArea label {
+        font-weight: 600 !important;
+        color: #1e293b !important;
+        font-size: 0.95rem !important;
+        margin-bottom: 0.5rem !important;
     }
     
-    .stButton button:hover {
+    /* Button styling */
+    .stButton > button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 0.75rem 2rem !important;
+        font-weight: 600 !important;
+        font-size: 1rem !important;
+        transition: all 0.3s !important;
+    }
+    
+    .stButton > button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4) !important;
     }
     
-    .stSuccess, .stWarning, .stError, .stInfo {
+    /* Alert styling */
+    .stAlert {
         border-radius: 12px !important;
-        border-left: 4px solid !important;
+        border-left-width: 4px !important;
         padding: 1rem 1.25rem !important;
         font-weight: 500 !important;
+        background: white !important;
     }
     
+    /* Divider */
     hr {
-        margin: 2rem 0 !important;
+        margin: 2.5rem 0 !important;
         border: none !important;
         height: 2px !important;
-        background: linear-gradient(90deg, transparent, #e2e8f0, transparent) !important;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent) !important;
     }
     
+    /* Column spacing */
     [data-testid="column"] {
-        padding: 0 0.75rem;
+        padding: 0 0.75rem !important;
     }
     
-    .subtitle {
-        color: rgba(255,255,255,0.9);
-        text-align: center;
-        font-size: 1.125rem;
-        font-weight: 500;
-        margin-bottom: 2rem;
+    /* Caption text */
+    .stCaptionContainer {
+        color: #64748b !important;
+        font-size: 0.875rem !important;
+        margin-top: 0.25rem !important;
     }
     
-    /* Result badges */
-    .result-badge {
-        display: inline-block;
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        font-weight: 700;
-        font-size: 1rem;
-        margin: 0.5rem 0;
-    }
-    
-    .badge-success {
-        background: #dcfce7;
-        color: #166534;
-        border: 2px solid #16a34a;
-    }
-    
-    .badge-warning {
-        background: #fef3c7;
-        color: #92400e;
-        border: 2px solid #f59e0b;
-    }
-    
-    .badge-error {
-        background: #fee2e2;
-        color: #991b1b;
-        border: 2px solid #ef4444;
+    /* Info box at bottom */
+    .stAlert[data-baseweb="notification"] {
+        background: white !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -199,38 +206,90 @@ def calculate_z_test_conversion(conv_A, n_A, conv_B, n_B):
     
     return z_stat, p_value
 
+def create_comparison_chart(control_val, variant_val, metric_name):
+    """Create a beautiful comparison bar chart"""
+    is_currency = '$' in metric_name
+    
+    fig = go.Figure()
+    
+    fig.add_trace(go.Bar(
+        name='Control',
+        x=['Control'],
+        y=[control_val],
+        marker_color='#94a3b8',
+        text=[f'${control_val:.2f}' if is_currency else f'{control_val:.2f}%'],
+        textposition='outside',
+        textfont=dict(size=16, family='Inter', color='#1e293b'),
+        width=0.5
+    ))
+    
+    fig.add_trace(go.Bar(
+        name='Variant',
+        x=['Variant'],
+        y=[variant_val],
+        marker_color='#667eea',
+        text=[f'${variant_val:.2f}' if is_currency else f'{variant_val:.2f}%'],
+        textposition='outside',
+        textfont=dict(size=16, family='Inter', color='#1e293b'),
+        width=0.5
+    ))
+    
+    fig.update_layout(
+        title=dict(
+            text=metric_name, 
+            font=dict(size=16, family='Inter', color='#1e293b'),
+            x=0.5,
+            xanchor='center'
+        ),
+        showlegend=False,
+        paper_bgcolor='white',
+        plot_bgcolor='white',
+        height=280,
+        margin=dict(l=20, r=20, t=60, b=40),
+        yaxis=dict(
+            showgrid=True, 
+            gridcolor='#f1f5f9', 
+            zeroline=False,
+            title=None
+        ),
+        xaxis=dict(
+            showgrid=False,
+            title=None
+        )
+    )
+    
+    return fig
+
 # Header
 st.markdown("<h1>🎯 CRO Test Calculator</h1>", unsafe_allow_html=True)
 st.markdown("<p class='subtitle'>Calculate statistical significance for conversion optimization tests</p>", unsafe_allow_html=True)
 
-# Input Section
 st.markdown("---")
 
-col_a, col_b = st.columns(2)
+# Input Section
+col_a, col_b = st.columns(2, gap="large")
 
 with col_a:
-    with st.container():
-        st.markdown("### 🅰️ Control Group")
-        n_A = st.number_input("Total Visitors (Control)", min_value=1, value=10000, step=100, key="control_visitors")
-        n_purchasers_A = st.number_input("Number of Conversions (Control)", min_value=0, value=280, step=1, key="control_conversions")
-        revenue_A = st.text_area(
-            "Revenue per order (comma-separated)", 
-            value="89.50, 120.00, 67.99, 145.50, 89.50, 95.00, 110.50, 89.50, 78.00, 125.00",
-            height=120,
-            key="control_revenue"
-        )
+    st.markdown("### 🅰️ Control Group")
+    n_A = st.number_input("Total Visitors (Control)", min_value=1, value=10000, step=100, key="control_visitors")
+    n_purchasers_A = st.number_input("Number of Conversions (Control)", min_value=0, value=280, step=1, key="control_conversions")
+    revenue_A = st.text_area(
+        "Revenue per order (comma-separated)", 
+        value="89.50, 120.00, 67.99, 145.50, 89.50, 95.00, 110.50, 89.50, 78.00, 125.00",
+        height=120,
+        key="control_revenue"
+    )
 
 with col_b:
-    with st.container():
-        st.markdown("### 🅱️ Variant Group")
-        n_B = st.number_input("Total Visitors (Variant)", min_value=1, value=10000, step=100, key="variant_visitors")
-        n_purchasers_B = st.number_input("Number of Conversions (Variant)", min_value=0, value=312, step=1, key="variant_conversions")
-        revenue_B = st.text_area(
-            "Revenue per order (comma-separated)", 
-            value="95.00, 128.00, 72.50, 152.00, 95.00, 98.50, 115.00, 95.00, 82.00, 130.50",
-            height=120,
-            key="variant_revenue"
-        )
+    st.markdown("### 🅱️ Variant Group")
+    n_B = st.number_input("Total Visitors (Variant)", min_value=1, value=10000, step=100, key="variant_visitors")
+    n_purchasers_B = st.number_input("Number of Conversions (Variant)", min_value=0, value=312, step=1, key="variant_conversions")
+    revenue_B = st.text_area(
+        "Revenue per order (comma-separated)", 
+        value="95.00, 128.00, 72.50, 152.00, 95.00, 98.50, 115.00, 95.00, 82.00, 130.50",
+        height=120,
+        key="variant_revenue"
+    )
 
 # Parse revenues
 try:
@@ -272,6 +331,7 @@ st.markdown("---")
 # Summary Metrics
 st.markdown("## 📊 Performance Overview")
 
+# Create metrics row
 metric_col1, metric_col2, metric_col3 = st.columns(3)
 
 with metric_col1:
@@ -304,34 +364,23 @@ with metric_col3:
     )
     st.caption(f"Control: ${arpu_A:.2f}")
 
-# Simple bar charts using streamlit
+# Visual comparisons
 st.markdown("---")
+st.markdown("## 📈 Visual Comparison")
 
 chart_col1, chart_col2, chart_col3 = st.columns(3)
 
 with chart_col1:
-    st.markdown("**Conversion Rate Comparison**")
-    chart_data = pd.DataFrame({
-        'Group': ['Control', 'Variant'],
-        'Conversion Rate (%)': [conv_rate_A, conv_rate_B]
-    })
-    st.bar_chart(chart_data.set_index('Group'))
+    fig_conv = create_comparison_chart(conv_rate_A, conv_rate_B, "Conversion Rate")
+    st.plotly_chart(fig_conv, use_container_width=True)
 
 with chart_col2:
-    st.markdown("**AOV Comparison**")
-    chart_data = pd.DataFrame({
-        'Group': ['Control', 'Variant'],
-        'AOV ($)': [aov_A, aov_B]
-    })
-    st.bar_chart(chart_data.set_index('Group'))
+    fig_aov = create_comparison_chart(aov_A, aov_B, "Average Order Value")
+    st.plotly_chart(fig_aov, use_container_width=True)
 
 with chart_col3:
-    st.markdown("**RPV Comparison**")
-    chart_data = pd.DataFrame({
-        'Group': ['Control', 'Variant'],
-        'RPV ($)': [arpu_A, arpu_B]
-    })
-    st.bar_chart(chart_data.set_index('Group'))
+    fig_rpv = create_comparison_chart(arpu_A, arpu_B, "Revenue Per Visitor")
+    st.plotly_chart(fig_rpv, use_container_width=True)
 
 st.markdown("---")
 
@@ -353,9 +402,11 @@ if z_stat_conv is not None:
         st.metric("P-Value", f"{p_value_conv:.4f}")
     with test_col4:
         if p_value_conv < 0.05:
-            st.markdown("<div class='result-badge badge-success'>✅ Significant</div>", unsafe_allow_html=True)
+            st.metric("Result", "✅ Significant", delta="95% confidence")
         else:
-            st.markdown("<div class='result-badge badge-error'>❌ Inconclusive</div>", unsafe_allow_html=True)
+            st.metric("Result", "❌ Inconclusive", delta="Need more data")
+    
+    st.markdown("")  # spacing
     
     if p_value_conv < 0.05:
         st.success(f"✅ **Statistically Significant** — There's a {(1-p_value_conv)*100:.1f}% probability this isn't random chance.")
@@ -363,6 +414,8 @@ if z_stat_conv is not None:
         st.warning(f"⚠️ **Marginally Significant** — P-value of {p_value_conv:.4f} suggests a trend, but more data recommended.")
     else:
         st.error(f"❌ **Not Significant** — P-value of {p_value_conv:.4f} means we can't rule out random chance. Continue testing.")
+
+st.markdown("")  # spacing
 
 # Test 2: RPV/ARPU
 st.markdown("### 2️⃣ Revenue Per Visitor Test")
@@ -379,9 +432,11 @@ if t_stat_arpu is not None:
         st.metric("P-Value", f"{p_value_arpu:.4f}")
     with test_col4:
         if p_value_arpu < 0.05:
-            st.markdown("<div class='result-badge badge-success'>✅ Significant</div>", unsafe_allow_html=True)
+            st.metric("Result", "✅ Significant", delta="95% confidence")
         else:
-            st.markdown("<div class='result-badge badge-error'>❌ Inconclusive</div>", unsafe_allow_html=True)
+            st.metric("Result", "❌ Inconclusive", delta="Need more data")
+    
+    st.markdown("")  # spacing
     
     if p_value_arpu < 0.05:
         st.success(f"✅ **Statistically Significant** — There's a {(1-p_value_arpu)*100:.1f}% probability this isn't random chance.")
@@ -389,6 +444,8 @@ if t_stat_arpu is not None:
         st.warning(f"⚠️ **Marginally Significant** — P-value of {p_value_arpu:.4f} suggests a trend, but more data recommended.")
     else:
         st.error(f"❌ **Not Significant** — P-value of {p_value_arpu:.4f} means we can't rule out random chance. Continue testing.")
+
+st.markdown("")  # spacing
 
 # Test 3: AOV
 st.markdown("### 3️⃣ Average Order Value Test")
@@ -407,9 +464,11 @@ if n_purchasers_A > 1 and n_purchasers_B > 1:
             st.metric("P-Value", f"{p_value_aov:.4f}")
         with test_col4:
             if p_value_aov < 0.05:
-                st.markdown("<div class='result-badge badge-success'>✅ Significant</div>", unsafe_allow_html=True)
+                st.metric("Result", "✅ Significant", delta="95% confidence")
             else:
-                st.markdown("<div class='result-badge badge-error'>❌ Inconclusive</div>", unsafe_allow_html=True)
+                st.metric("Result", "❌ Inconclusive", delta="Need more data")
+        
+        st.markdown("")  # spacing
         
         if p_value_aov < 0.05:
             st.success(f"✅ **Statistically Significant** — There's a {(1-p_value_aov)*100:.1f}% probability this isn't random chance.")
